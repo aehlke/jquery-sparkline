@@ -182,64 +182,7 @@
         }
         var mtimer = setTimeout(mdraw, mrefreshinterval); // We could use setInterval instead, but I prefer to do it this way
         $.sparkline_display_visible(); 
-        $('#simplelink')[0].target = '_blank';
  
- 
-        $('#splunkjobs').mouseenter(function() {
-            // make element absolute, positioned over the top of the float and resize
-            $('<div id="shade"></div>').
-                appendTo('body').
-                css('height', $(document).height()).
-                animate({
-                    opacity: 0.6
-                });
-            var jparent = $('#splunkjobs').parent();
-            var sj = $('#splunkjobs');
-            var offset = sj.offset();
-            var height = sj.height();
-            var width = sj.width();
-            var abscopy = sj.
-                clone(false).
-                attr('id', 'jobspopup').
-                addClass('splunkjobs').
-                css('position', 'absolute').
-                css('backgroundColor', 'white').
-                css('zIndex', 1000).
-                offset(offset).
-                width(width).
-                height(height).
-                appendTo(jparent).
-                mouseleave(function() {
-                    $('#shade').
-                        animate({
-                            opacity: 0
-                        }, 1000, function() { $(this).remove(); });
-                    $(this).animate({
-                        width: '-=300px',
-                        height: height,
-                        left: '+=300px'
-                    }, 1000, function() { $(this).remove(); });
-                    $('#splunkjobsdetail').animate({
-                        'opacity': 0
-                        }, 1000, function() { $(this).remove(); });
-                    //$(this).remove();
-                }).
-                animate({
-                    width: '+=300px',
-                    height: '350px',
-                    left: '-=300px'
-                }, 1000)
-                ;
-            var details = $('#splunkjobsdetailbase').
-                clone().
-                css('top', -800).
-                attr('id', 'splunkjobsdetail').
-                appendTo(abscopy).
-                animate({
-                    top: '0px'
-                }, 1000);
- 
-        });
     });
  
  
@@ -350,10 +293,35 @@
             </p> 
  
             <p> 
-                Bar charts <span class="bar">10,8,9,3,5,8,5</span> negative values: <span class="bar">-3,1,2,0,3,-1</span> 
+                Bar charts
+                <span class="bar">10,8,9,3,5,8,5</span>,
+                <span class="bar">1,2,4,8</span>,
+                <span class="bar">3,2,1</span>,
+                <span class="bar">2,2,2</span>,
+                <span class="bar">1,1,1</span>,
+                <span class="bar">0,0,0</span>,
+                <span class="bar">0,1,0</span>,
+                negative values: <span class="bar">-3,1,2,0,3,-1</span> 
             </p> 
             <p> 
-                Stacked bar charts <span class="stackedbar">10,8,9,3,5,8,5</span> negative values: <span class="stackedbar">-3,1,2,0,3,-1</span>
+                Stacked bar charts
+                <span class="stackedbar">1,2,3|1,2,3|2,4,6</span>,
+                <span class="stackedbar">1,1,1|2,2,2|3,3,3</span>,
+                <span class="stackedbar">1,1,1|2,2,2|4,4,4|8,8,8</span>,
+                <span class="stackedbar">1,1|2,2|4,4|8,8</span>,
+                <span class="stackedbar">1|2|4|8</span>,
+                <span class="stackedbar">10|20|40|80</span>,
+                <span class="stackedbar">8|4|2|1</span>,
+                <span class="stackedbar">1,2,3,4,5|6,7,8,9,10</span>,
+                <span class="stackedbar">1,2,3|1,2,3|2,4,6</span>,
+                <span class="stackedbar">3,3|3,3</span>,
+                <span class="stackedbar">1,2,3</span>,
+                <span class="stackedbar">1,2,3|2,2,2</span>,
+                
+                negative values:
+                <span class="stackedbar">-1,-1,-1</span>
+                <span class="stackedbar">-1,2,-3</span>
+                <span class="stackedbar">-3,1|2,0|3,-1</span>
             </p> 
  
             <p> 

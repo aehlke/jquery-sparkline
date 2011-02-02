@@ -89,8 +89,8 @@
 *   enableTagOptions - Whether to check tags for sparkline options 
 *   tagOptionPrefix - Prefix used for options supplied as tag attributes - Defaults to 'spark'
 *
-* There are 7 types of sparkline, selected by supplying a "type" option of 'line' (default),
-* 'bar', 'tristate', 'bullet', 'discrete', 'pie' or 'box'
+* There are 8 types of sparkline, selected by supplying a "type" option of 'line' (default),
+* 'bar', 'stackedbar', 'tristate', 'bullet', 'discrete', 'pie' or 'box'
 *    line - Line chart.  Options:
 *       spotColor - Set to '' to not end each line in a circular spot
 *       minSpotColor - If set, color of spot at minimum value
@@ -114,6 +114,11 @@
 *                  can be an Array of values to control the color of individual bars
 *       barSpacing - Gap between bars in pixels
 *       zeroAxis - Centers the y-axis around zero if true
+*   
+*   stackedbar - Stacked bar chart. Options:
+*       barColors - List of colors of bars for positive values
+*       negBarColors - List of colors of bars for negative values
+*       the rest are the same as for bar.
 *
 *   tristate - Charts values of win (>0), lose (<0) or draw (=0)
 *       posBarColor - Color of win values
@@ -217,6 +222,20 @@
             chartRangeClip: false,
             colorMap : undefined
         },
+        // Defaults for stacked bar charts
+        stackedbar: {
+            barColors : ['blue', 'green', 'purple', 'orange'],
+            negBarColors : ['red', 'darkred','lightred','darkyellow'],
+            zeroColor: undefined,
+            nullColor: undefined,
+            zeroAxis : undefined,
+            barWidth : 4,
+            barSpacing : 1,
+            chartRangeMax: undefined,
+            chartRangeMin: undefined,
+            chartRangeClip: false,
+            colorMap : undefined
+        },
         // Defaults for tristate charts
         tristate: {
             barWidth : 4,
@@ -295,17 +314,34 @@
             var options = new $.fn.sparkline.options(this, userOptions);
             var render = function() {
                 var values, width, height;
+
+                // valuesLen is different for nested values -- it's the length of an inner list
+                var valuesLen = null;
+
                 if (uservalues==='html' || uservalues===undefined) {
                     var vals = this.getAttribute(options.get('tagValuesAttribute'));
                     if (vals===undefined || vals===null) {
                         vals = $(this).html();
                     }
-                    values = vals.replace(/(^\s*<!--)|(-->\s*$)|\s+/g, '').split(',');
+                    values = vals.replace(/(^\s*<!--)|(-->\s*$)|\s+/g, '');
+                    if (values.indexOf('|') != -1) {
+                        // Nested list (list of lists, delimited by |)
+                        values = values.split('|');
+                        for (var i=0; i<values.length; i++) {
+                            values[i] = values[i].split(',');
+                            valuesLen = values[i].length;
+                        }
+                    } else {
+                        values = values.split(',');
+                    }
                 } else {
                     values = uservalues;
                 }
+                if (valuesLen == null) {
+                    valuesLen = values.length;
+                }
 
-                width = options.get('width')=='auto' ? values.length*options.get('defaultPixelsPerValue') : options.get('width');
+                width = options.get('width')=='auto' ? valuesLen*options.get('defaultPixelsPerValue') : options.get('width');
                 if (options.get('height') == 'auto') {
                     if (!options.get('composite') || !this.VCanvas) {
                         // must be a better way to get the line height
@@ -342,6 +378,30 @@
             }
         }
     };
+
+    // Zips arrays
+    var zip = function() {
+        for(var i=0;i<arguments.length;i++) {
+            if(!arguments[i].length || !arguments.toString()) {
+                //doesn't have a length or isn't an array
+                return false;   
+            }
+            if(i >= 1) {
+                if(arguments[i].length !== arguments[i-1].length) {
+                    return false;
+                }    
+            }
+        }
+        var zipped = [];
+        for(var j=0;j<arguments[0].length;j++) {
+            var toBeZipped = [];
+            for(var k=0;k<arguments.length;k++) {
+                toBeZipped.push(arguments[k][j]);  
+            }
+            zipped.push(toBeZipped);   
+        }
+        return zipped;
+    }
 
 
     /**
@@ -698,7 +758,8 @@
                         height = Math.round(canvas_height*((Math.abs(val)/range)))+1;
                         y = (val < 0) ? yzero : yzero-height;
                     } else {
-                        height = Math.round(canvas_height*((val-min)/range))+1;
+                        var adjustedVal = (val - min == 0) ? val : val - min;
+                        height = Math.round(canvas_height*(adjustedVal/range))+1;
                         y = canvas_height-height;
                     }
                     if (val===0 && options.get('zeroColor')!==undefined) {
@@ -721,6 +782,129 @@
         }
     };
 
+    /** 
+     * Stacked bar charts
+     */
+    $.fn.sparkline.stackedbar = function(values, options, width, height) {
+        if (values.length && !$.isArray(values[0])) {
+            values = [values];
+        }
+        var valuesLen = 0;
+        var num_values = [];
+        for(var i=0, vlen=values.length; i<vlen; i++) {
+            if (values[i]=='null' || values[i]===null) {
+                values[i] = null;
+            } else {
+                var inner_num_values = []
+                for (var j=0; j<values[i].length; j++) {
+                    values[i][j] = Number(values[i][j]);
+                    inner_num_values.push(values[i][j]);
+                }
+                valuesLen = values[i].length;
+                num_values.push(inner_num_values);
+            }
+        }
+
+        width = (valuesLen * options.get('barWidth')) + ((valuesLen-1) * options.get('barSpacing'));
+
+        // Rotate the values
+        num_values = zip.apply(this, num_values);
+
+        var max = Math.max.apply(Math, $.map(num_values, function(el, index) {
+            var total = 0;
+            $.map(el, function(el2) {
+                total += el2;
+            });
+            return total;
+        }));
+        var min = Math.min.apply(Math, $.map(num_values, function(el, index) {
+            var total = 0;
+            $.each(el, function(el2) {
+                total += el2;
+            });
+            return total;
+        }));
+
+        if (options.get('chartRangeMin')!==undefined && (options.get('chartRangeClip') || options.get('chartRangeMin')<min)) {
+            min = options.get('chartRangeMin');
+        }
+        if (options.get('chartRangeMax')!==undefined && (options.get('chartRangeClip') || options.get('chartRangeMax')>max)) {
+            max = options.get('chartRangeMax');
+        }
+        var zeroAxis = options.get('zeroAxis');
+        if (zeroAxis === undefined) {
+            zeroAxis = min<0;
+        }
+        var range = max-min === 0 ? 1 : max-min;
+
+        var colorMapByIndex, colorMapByValue;
+        if ($.isArray(options.get('colorMap'))) {
+            colorMapByIndex = options.get('colorMap');
+            colorMapByValue = null;
+        } else {
+            colorMapByIndex = null;
+            colorMapByValue = options.get('colorMap');
+        }
+
+        var target = $(this).simpledraw(width, height, options.get('composite'));
+        if (target) {
+            var color,
+                canvas_height = target.pixel_height,
+                yzero = min<0 && zeroAxis ? canvas_height-Math.round(canvas_height * (Math.abs(min)/range))-1 : canvas_height-1;
+
+            for(i=num_values.length; i--;) {
+                var cumulativeHeight = 0;
+                for (j=num_values[i].length; j--;) {
+                    var x = i*(options.get('barWidth')+options.get('barSpacing')),
+                        y,
+                        val = num_values[i][j];
+                    if (val===null) {
+                        if (options.get('nullColor')) {
+                            color = options.get('nullColor');
+                            val = (zeroAxis && min<0) ? 0 : min;
+                            height = 1;
+                            y = (zeroAxis && min<0) ? yzero : canvas_height - height;
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        if (val < min) {
+                            val=min;
+                        }
+                        if (val > max) {
+                            val=max;
+                        }
+                        var colors = (val < 0) ? options.get('negBarColors') : options.get('barColors');
+                        color = colors[j % colors.length];
+                        if (zeroAxis && min<0) {
+                            height = Math.round(canvas_height*((Math.abs(val)/range)))+1;
+                            y = (val < 0) ? yzero : yzero-height;
+                        } else {
+                            var adjustedVal = (val - min == 0) ? val : val - min;
+                            height = Math.round(canvas_height*(adjustedVal/range))+1;
+                            y = canvas_height-height-cumulativeHeight;
+                        }
+                        cumulativeHeight += height;
+                        if (val===0 && options.get('zeroColor')!==undefined) {
+                            color = options.get('zeroColor');
+                        }
+                        if (colorMapByValue && colorMapByValue[val]) {
+                            color = colorMapByValue[val];
+                        } else if (colorMapByIndex && colorMapByIndex.length>i) {
+                            color = colorMapByIndex[i];
+                        }
+                        if (color===null) {
+                            continue;
+                        }
+                    }
+                    target.drawRect(x, y, options.get('barWidth')-1, height-1, color, color);
+                }
+            }
+        } else {
+            // Remove the tag contents if sparklines aren't supported
+            this.innerHTML = '';
+        }
+    };
 
     /**
      * Tristate charts
