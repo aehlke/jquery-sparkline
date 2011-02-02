@@ -2,7 +2,7 @@
 *
 * jquery.sparkline.js
 *
-* v1.6
+* v1.7
 * (c) Splunk, Inc 
 * Contact: Gareth Watts (gareth@splunk.com)
 * http://omnipotent.net/jquery.sparkline/
@@ -819,7 +819,7 @@
         }));
         var min = Math.min.apply(Math, $.map(num_values, function(el, index) {
             var total = 0;
-            $.each(el, function(el2) {
+            $.map(el, function(el2) {
                 total += el2;
             });
             return total;
