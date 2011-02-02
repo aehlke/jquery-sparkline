@@ -1,0 +1,6 @@
+This is a fork of Gareth Watts's jQuery Sparklines plugin.
+Homepage: http://omnipotent.net/jquery.sparkline/
+
+I (Alex Ehlke) just fixed a bug and added support for stacked column graphs.
+The rest is the work of Gareth Watts and Splunk, Inc., of which I have no affiliation with.
+
